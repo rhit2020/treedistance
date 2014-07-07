@@ -10,14 +10,15 @@ import java.util.List;
 
 public class createTED {
 	
-	private String[] ignoreConceptList = {"ClassDefinition","FormalMethodParameter","MethodDefinition",
-			       "PublicClassSpecifier","PublicMethodSpecifier","StaticMethodSpecifier","VoidDataType"};
+//	private String[] ignoreConceptList = {"ClassDefinition","FormalMethodParameter","MethodDefinition",
+//			       "PublicClassSpecifier","PublicMethodSpecifier","StaticMethodSpecifier","VoidDataType"};
+//
 	public static void main (String[] args)
 	{
 		createTED ted = new createTED();
 		DB db  = new DB();
-		db.connectToGuangie();
-		if (db.isConnectedToGuanjie())
+		db.connectToLabstudy();
+		if (db.isConnectedToLabstudy())
 		{
 		    List<String> rdfs = db.getContentsRdfs(); 
 //			String[] rdfs = {"inheritance_casting_1"};
@@ -41,9 +42,8 @@ public class createTED {
 //				etree = db.getTree(eList[i]);
 //				writeToFile(qList[j],qtree,eList[i],etree);
 //			}
-			db.disconnectFromGuanjie();
+			db.disconnectFromLabstudy();
 		}
-		db.disconnectFromUM2();
 	}
 
 	private static void writeToFile(String q, String qtree, String e, String etree) {
@@ -67,7 +67,7 @@ public class createTED {
 
 	private String createTree(String content, DB db) {
 		List<String> subtreeList = new ArrayList<String>();
-		List<String> conceptsInSameStartEndLine;
+		List<String> conceptsInSameStartLine;
 		List<String> conceptsInDifferentStartEndLine;
 		List<String> adjucentConceptsList;
 		String se = db.getStartEndLine(content);
@@ -79,13 +79,13 @@ public class createTED {
 		for (int i = start; i <= end; i++)
 		{
 			subtree = "";
-			conceptsInSameStartEndLine = db.getConceptsInSameStartEndLine(content,i);
-			if (conceptsInSameStartEndLine.isEmpty() == false)
+			conceptsInSameStartLine = db.getConceptsInSameStartLine(content,i);
+			if (conceptsInSameStartLine.isEmpty() == false)
 			{
-				Collections.sort(conceptsInSameStartEndLine, new SortByName());
-				for (String c : conceptsInSameStartEndLine)
+				Collections.sort(conceptsInSameStartLine, new SortByName());
+				for (String c : conceptsInSameStartLine)
 				{
-					subtree +="JAVA-"+c+";";		
+					subtree +="ROOT-"+c+";";		
 				}
 				if (subtreeList.contains(subtree) == false)
 				{
