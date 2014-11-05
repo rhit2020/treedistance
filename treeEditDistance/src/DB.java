@@ -60,7 +60,7 @@ public class DB {
 		List<String> rdfs = new ArrayList<String>();
 		try
 		{
-			sqlCommand = "SELECT content_name FROM ent_content where domain = 'java'";
+			sqlCommand = "select rdf from ent_content where domain = 'java';";
 			ps = labstudyConn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
