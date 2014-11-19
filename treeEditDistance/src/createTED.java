@@ -17,8 +17,8 @@ public class createTED {
 	{
 		createTED ted = new createTED();
 		DB db  = new DB();
-		db.connectToLabstudy();
-		if (db.isConnectedToLabstudy())
+		db.connectToWebex21();
+		if (db.isConnectedToWebex21())
 		{
 		    List<String> rdfs = db.getContentsRdfs(); 
 //			String[] rdfs = {"inheritance_casting_1"};
@@ -42,7 +42,7 @@ public class createTED {
 //				etree = db.getTree(eList[i]);
 //				writeToFile(qList[j],qtree,eList[i],etree);
 //			}
-			db.disconnectFromLabstudy();
+			db.disconnectFromWebex();
 		}
 	}
 

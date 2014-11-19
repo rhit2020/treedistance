@@ -9,31 +9,77 @@ import java.util.List;
 
 
 public class DB {
-	private Connection labstudyConn;
-	private boolean isConnLabstudyValid;
-		
-	public void connectToLabstudy()
+//	private Connection labstudyConn;
+//	private boolean isConnLabstudyValid;
+	
+	private Connection webex21Conn;
+	private boolean isWebex21ConnValid;
+	
+	public void connectToWebex21()
 	{
-		  String url = api.Constants.DB.LABSTUDY_URL;
+		  String url = api.Constants.DB.WEBEX_URL;
 		  String driver = api.Constants.DB.DRIVER;
 		  String userName = api.Constants.DB.USER;
 		  String password = api.Constants.DB.PASSWORD;
 		  
 		  try {
 		  Class.forName(driver).newInstance();
-		  labstudyConn = DriverManager.getConnection(url,userName,password);
-		  isConnLabstudyValid = true;
-		  System.out.println("Connected to the database labstudy");
+		  webex21Conn = DriverManager.getConnection(url,userName,password);
+		  isWebex21ConnValid = true;
+		  System.out.println("Connected to the database webex");
 		  } catch (Exception e) {
 		  e.printStackTrace();
 		  }	
 	}
-		
-	public boolean isConnectedToLabstudy()
+	
+	
+//	public void connectToLabstudy()
+//	{
+//		  String url = api.Constants.DB.LABSTUDY_URL;
+//		  String driver = api.Constants.DB.DRIVER;
+//		  String userName = api.Constants.DB.USER;
+//		  String password = api.Constants.DB.PASSWORD;
+//		  
+//		  try {
+//		  Class.forName(driver).newInstance();
+//		  labstudyConn = DriverManager.getConnection(url,userName,password);
+//		  isConnLabstudyValid = true;
+//		  System.out.println("Connected to the database labstudy");
+//		  } catch (Exception e) {
+//		  e.printStackTrace();
+//		  }	
+//	}
+//		
+//	public boolean isConnectedToLabstudy()
+//	{
+//		if (labstudyConn != null) {
+//			try {
+//				if (labstudyConn.isClosed() == false & isConnLabstudyValid)
+//					return true;
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		return false;
+//	}
+//	
+//		
+//	public void disconnectFromLabstudy()
+//	{
+//		if (labstudyConn != null)
+//			try {
+//				labstudyConn.close();
+//			    System.out.println("Database labstudy Connection Closed");
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//			}
+//	}
+	
+	public boolean isConnectedToWebex21()
 	{
-		if (labstudyConn != null) {
+		if (webex21Conn != null) {
 			try {
-				if (labstudyConn.isClosed() == false & isConnLabstudyValid)
+				if (webex21Conn.isClosed() == false & isWebex21ConnValid )
 					return true;
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -41,16 +87,16 @@ public class DB {
 		}
 		return false;
 	}
-		
-	public void disconnectFromLabstudy()
+
+	public void disconnectFromWebex()
 	{
-		if (labstudyConn != null)
+		if (webex21Conn != null)
 			try {
-				labstudyConn.close();
-			    System.out.println("Database labstudy Connection Closed");
+				webex21Conn.close();
+			    System.out.println("Database webex Connection Closed");
 			} catch (SQLException e) {
 				e.printStackTrace();
-			}
+		}
 	}
 	
 	public List<String> getContentsRdfs() {
@@ -60,14 +106,15 @@ public class DB {
 		List<String> rdfs = new ArrayList<String>();
 		try
 		{
-			sqlCommand = "select rdf from ent_content where domain = 'java';";
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			sqlCommand = "(select distinct rdfid from ent_jquiz) union (select distinct d.rdfid from ent_dissection d,rel_scope_dissection sd where sd.DissectionID = d.DissectionID and sd.scopeid = 12)";
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 				rdfs.add(rs.getString(1));
 		}catch (SQLException e) {
 			 e.printStackTrace();
-		}	
+		}
+		releaseStatement(ps,rs);
 		return rdfs;	
 	}
 
@@ -77,11 +124,12 @@ public class DB {
 		try
 		{
 			sqlCommand = "insert into ent_content_tree (content_name,tree) values ('"+c+"','"+tree+"')";
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			ps.executeUpdate();			
 		}catch (SQLException e) {
 			 e.printStackTrace();
-		}				
+		}	
+		releaseStatement(ps,null);
 	}
 
 	public List<String> getAdjacentConcept(String content, String concept, int sLine) {
@@ -89,22 +137,8 @@ public class DB {
 		String sqlCommand = "";
 		ResultSet rs = null;
 		List<String> conceptList = new ArrayList<String>();
-		boolean isExample = false;
-
-		int eline = -1;
-		sqlCommand = "select content_type from ent_content where content_name ='"+content+"'";
-		try {
-			ps = labstudyConn.prepareStatement(sqlCommand);
-			rs = ps.executeQuery();
-			while (rs.next())
-			{
-				 if (rs.getString(1).equals("example"))
-					 isExample = true;
-			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		boolean isExample = getContentType(content);
+		int eline = -1;		
 		
 		String conceptTable = "ent_jquiz_concept";
 		if (isExample)
@@ -113,14 +147,14 @@ public class DB {
 		try
 		{		
 			sqlCommand = "select eline from "+conceptTable+" where title ='"+content+"' and sline = "+sLine+" and concept = '"+concept +"'" ;
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 			{
 				eline = rs.getInt(1);
 			}
 			sqlCommand = "select distinct concept from "+conceptTable+" where title ='"+content+"' and sline >= "+sLine+" and eline <= "+eline +" and concept != '"+concept+"'" ;
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 			{
@@ -130,7 +164,7 @@ public class DB {
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}
-				
+		releaseStatement(ps,rs);
 		return conceptList;	
 	}
 
@@ -139,20 +173,7 @@ public class DB {
 		String sqlCommand = "";
 		ResultSet rs = null;
 		String lines = "";
-		boolean isExample = false;	
-		sqlCommand = "select content_type from ent_content where content_name ='"+content+"'";
-		try {
-			ps = labstudyConn.prepareStatement(sqlCommand);
-			rs = ps.executeQuery();
-			while (rs.next())
-			{
-				 if (rs.getString(1).equals("example"))
-					 isExample = true;
-			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		boolean isExample = getContentType(content);	
 		
 		String conceptTable = "ent_jquiz_concept";
 		if (isExample)				
@@ -161,7 +182,7 @@ public class DB {
 		{
 			int s=-1,e=-1 ;
 			sqlCommand = "select min(sline),max(eline) from "+conceptTable+" where title ='"+content+"'";
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 			{
@@ -172,29 +193,17 @@ public class DB {
 			
 		}catch (SQLException e) {
 			 e.printStackTrace();
-		}			
+		}	
+		releaseStatement(ps,rs);
 		return lines;	
 	}
 
 	public List<String> getConceptsInSameStartLine(String content, int sline) {
 		String sqlCommand = "";
 		ResultSet rs = null;
-		PreparedStatement ps;
+		PreparedStatement ps = null;
 		List<String> conceptList = new ArrayList<String>();
-		boolean isExample = false;
-		sqlCommand = "select content_type from ent_content where content_name ='"
-				+ content + "'";
-		try {
-			ps = labstudyConn.prepareStatement(sqlCommand);
-			rs = ps.executeQuery();
-			while (rs.next()) {
-				if (rs.getString(1).equals("example"))
-					isExample = true;
-			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		boolean isExample = getContentType(content);
 
 		String conceptTable = "ent_jquiz_concept";
 		if (isExample)
@@ -203,38 +212,24 @@ public class DB {
 		try {
 			sqlCommand = "select distinct concept from " + conceptTable
 					+ " where title ='" + content + "' and sline = " + sline;
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 				conceptList.add(rs.getString(1));
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-
+		releaseStatement(ps,rs);
 		return conceptList;
-
 	}
 
-	public List<String> getConceptsInDifferentStartEndLine(String content, int sline) {
-
+	public List<String> getConceptsInDifferentStartEndLine(String content, int sline)
+	{
 		PreparedStatement ps = null;
 		String sqlCommand = "";
 		ResultSet rs = null;
 		List<String> conceptList = new ArrayList<String>();
-		boolean isExample = false;
-		sqlCommand = "select content_type from ent_content where content_name ='"+content+"'";
-		try {
-			ps = labstudyConn.prepareStatement(sqlCommand);
-			rs = ps.executeQuery();
-			while (rs.next())
-			{
-				 if (rs.getString(1).equals("example"))
-					 isExample = true;
-			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		boolean isExample = getContentType(content);	
 		
 		String conceptTable = "ent_jquiz_concept";
 		if (isExample)
@@ -243,14 +238,61 @@ public class DB {
 		try
 		{								
 			sqlCommand = "select distinct concept from "+conceptTable+" where title ='"+content+"' and sline != eline and sline = "+sline;
-			ps = labstudyConn.prepareStatement(sqlCommand);
+			ps = webex21Conn.prepareStatement(sqlCommand);
 			rs = ps.executeQuery();
 			while (rs.next())
 				conceptList.add(rs.getString(1));
 		}catch (SQLException e) {
 			 e.printStackTrace();
 		}
-			
+		releaseStatement(ps,rs);
 		return conceptList;		
+	}
+	
+	private boolean getContentType(String rdfid)
+	{
+		PreparedStatement ps = null;
+		String sqlCommand = "";
+		ResultSet rs = null;
+		boolean isExample = false;
+		boolean isQuestion = false;
+		try
+		{
+			sqlCommand = "select * from ent_dissection where rdfid = '"+rdfid+"'";
+			ps = webex21Conn.prepareStatement(sqlCommand);
+			rs = ps.executeQuery();
+			if (rs.next())
+			{
+				isExample = true;
+			}	
+			sqlCommand = "select * from ent_jquiz where rdfid = '"+rdfid+"'";
+			ps = webex21Conn.prepareStatement(sqlCommand);
+			rs = ps.executeQuery();
+			if (rs.next())
+			{
+				isQuestion = true;
+			}	
+		}catch (SQLException e) {
+			 e.printStackTrace();
+		}	
+		if (isExample & isQuestion)
+			System.out.println("Error occured! a content rdf: "+rdfid+" was in both ent_dissection and ent_jquiz");
+		releaseStatement(ps,rs);
+		return isExample;	
+	}
+	
+	private void releaseStatement(PreparedStatement p, ResultSet r)
+    {
+		try {
+			if (r != null) {
+				r.close();
+			}
+			if (p != null) {
+				p.close();
+			}			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
